@@ -1,0 +1,6 @@
+.git
+*.md
+scripts/
+project.env
+*.zip
+*.png
