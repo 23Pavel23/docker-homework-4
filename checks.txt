@@ -1,0 +1,103 @@
+
+===== 1. curl /
+HTTP 200
+<h1>docker-homework-4</h1>
+
+===== 2. curl /api
+HTTP 200
+{"name": "Павел Гришко", "variant": "4", "id": "d54be706", "hostname": "docker-homework-4-backend", "fact": "Light from the Sun reaches Earth in about 8 minutes"}
+
+===== 3. docker ps
+NAMES                        IMAGE                           STATUS                   PORTS
+docker-homework-4-frontend   docker-homework-4-frontend:v4   Up 5 minutes (healthy)   0.0.0.0:8004->80/tcp, [::]:8004->80/tcp
+docker-homework-4-backend    docker-homework-4-backend:v4    Up 5 minutes (healthy)   5000/tcp
+
+===== 4. backend не опубликован
+docker port backend: []
+curl localhost:5000 -> exit code 7
+
+===== 5. сеть
+docker-homework-4 driver=bridge
+  docker-homework-4-backend 172.18.0.2/16
+  docker-homework-4-frontend 172.18.0.3/16
+aliases backend: ["backend"]
+frontend -> http://backend:5000/health : {"status": "ok"}
+
+===== 6. лимиты
+/docker-homework-4-frontend NanoCpus=250000000 Memory=67108864
+/docker-homework-4-backend NanoCpus=500000000 Memory=134217728
+NAME                         CPU %     MEM USAGE / LIMIT
+docker-homework-4-frontend   0.00%     15.58MiB / 64MiB
+docker-homework-4-backend    0.01%     14.86MiB / 128MiB
+
+===== 7. healthcheck
+/docker-homework-4-frontend healthy FailingStreak=0
+/docker-homework-4-backend healthy FailingStreak=0
+
+===== 8. volume: меняю файл
+{"name": "Павел Гришко", "variant": "4", "id": "d54be706", "hostname": "docker-homework-4-backend", "fact": "Mars has two moons"}
+backend id до: 2387809948c6
+
+===== 9. volume: удаляю и создаю заново только backend (frontend не трогаю)
+docker-homework-4-backend
+e5af9b294d95342c8a036ee34a793d388384303c440213d684b60fc81b17fe56
+waiting for docker-homework-4-backend healthcheck........ healthy
+backend id после: e5af9b294d95
+HTTP 200
+{"name": "Павел Гришко", "variant": "4", "id": "d54be706", "hostname": "docker-homework-4-backend", "fact": "Mars has two moons"}
+
+===== 10. ПОЛОМКА (N % 4 = 0): volume смонтирован в /app/data
+b32dd5ccba74533b370c06bde6e97d953437c4087f1263ed455753803a5ec56a
+waiting for docker-homework-4-backend healthcheck........................ unhealthy
+
+===== 11. симптом
+HTTP 500
+{"error": "file not found /data/fact.txt"}
+
+===== 12. docker ps -a
+NAMES                        STATUS
+docker-homework-4-backend    Up 30 seconds (unhealthy)
+docker-homework-4-frontend   Up 5 minutes (healthy)
+
+===== 13. docker logs backend
+file not found: /data/fact.txt
+172.18.0.3 - - [24/Nov/2026 12:24:04] "GET / HTTP/1.0" 500 -
+172.18.0.3 - - [24/Nov/2026 12:24:04] "GET / HTTP/1.0" 500 -
+file not found: /data/fact.txt
+
+===== 14. гипотеза 1 - сеть / имя backend
+docker-homework-4-backend docker-homework-4-frontend 
+wget: server returned error: HTTP/1.0 500 Internal Server Error
+
+
+===== 15. гипотеза 2 - файл пропал из volume
+total 4
+-rw-r--r--    1 root     root            19 Nov 24 12:23 fact.txt
+Mars has two moons
+
+===== 16. гипотеза 3 - volume не по тому пути
+docker-homework-4-data -> /app/data
+ls /data:
+ls /app/data:
+fact.txt
+
+===== 17. docker port frontend
+80/tcp -> 0.0.0.0:8004
+80/tcp -> [::]:8004
+
+===== 18. curl -v
+> GET /api HTTP/1.1
+< HTTP/1.1 500 Internal Server Error
+
+===== 19. ИСПРАВЛЕНИЕ: backend с правильным путём
+26383dc2b4af9294434258bf4bac7609cb1f86b70e3fccfdb7a547781e2b9687
+waiting for docker-homework-4-backend healthcheck........ healthy
+
+===== 20. повторная проверка
+HTTP 200
+HTTP 200
+{"name": "Павел Гришко", "variant": "4", "id": "d54be706", "hostname": "docker-homework-4-backend", "fact": "Mars has two moons"}
+NAMES                        STATUS                    PORTS
+docker-homework-4-backend    Up 10 seconds (healthy)   5000/tcp
+docker-homework-4-frontend   Up 6 minutes (healthy)    0.0.0.0:8004->80/tcp, [::]:8004->80/tcp
+docker-homework-4-data -> /data

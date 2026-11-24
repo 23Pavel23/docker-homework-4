@@ -4,5 +4,6 @@ WORKDIR /app
 COPY backend/app.py .
 USER app
 EXPOSE 5000
-HEALTHCHECK CMD wget -q -O /dev/null http://127.0.0.1:5000/health || exit 1
-CMD ["python", "app.py"]
+HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
+    CMD wget -q -O /dev/null http://127.0.0.1:5000/health || exit 1
+CMD ["python", "-u", "app.py"]

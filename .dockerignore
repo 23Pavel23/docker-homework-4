@@ -4,3 +4,5 @@ scripts/
 project.env
 *.zip
 *.png
+*.jpg
+checks.txt
